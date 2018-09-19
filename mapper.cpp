@@ -1,12 +1,14 @@
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
-// #include <seqan3/range/view/take.hpp>
-// #include <seqan3/range/view/to_char.hpp>
+#include <seqan3/range/view/to_char.hpp>
 #include <seqan3/range/view/persist.hpp>
 #include <seqan3/search/fm_index/fm_index.hpp>
 #include <seqan3/search/fm_index/fm_index_iterator.hpp>
 #include <seqan3/search/algorithm/all.hpp>
+#include <seqan3/alignment/configuration/all.hpp>
+#include <seqan3/alignment/pairwise/align_pairwise.hpp>
+#include <seqan3/alphabet/gap/gapped.hpp>
 
 #include <range/v3/action/slice.hpp>
 
@@ -15,6 +17,7 @@ int main(int argc, char const ** argv)
     using namespace seqan3;
     using namespace seqan3::literal;
     using namespace seqan3::search_cfg;
+    using namespace seqan3::align_cfg;
 
     // Initialise the argument parser. The program name will be mapper, and we pass the arguments.
     argument_parser myparser("Mapper", argc, argv);
@@ -81,48 +84,32 @@ int main(int argc, char const ** argv)
 
     sequence_file_input queries{query, fields<field::ID, field::SEQ>{}};
 
-    detail::configuration const cfg = max_error(total{max_error_no},
+    detail::configuration cfg_search = max_error(total{max_error_no},
                                                 substitution{max_error_no},
                                                 insertion{max_error_no},
                                                 deletion{max_error_no})
-                                                | mode(best);
+                                                | mode(all_best);
+
+    auto cfg_align = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>() | align_cfg::output<align_result_key::trace>;
 
     for (auto & [id, seq] : queries)
     {
-        auto results = search(index, seq, cfg);
+        auto results = search(index, seq, cfg_search);
         for (auto res : results)
         {
-            auto m = genome | ranges::view::slice(res, res + seq.size() + max_error_no);
-            debug_stream << m << '\n';
+            dna5_vector seq1 = genome | ranges::view::slice(res, res + seq.size() + max_error_no);
+            debug_stream << seq1 << '\n';
+            debug_stream << seq << '\n';
+            for (auto && res2 : align_pairwise(std::tie(seq1, seq), cfg_align))
+            {
+                debug_stream << "Score: " << res2.score() << '\n';
+                auto && [gap_seq1, gap_seq2] = res2.trace();
+                std::vector<gapped<dna5>> g1 = gap_seq1;
+                debug_stream << g1 << '\n';
+                // debug_stream << gap_seq2 << '\n';
+            }
         }
-
+        if (results.size() != 0)
+            break;
     }
-
-/*
-    // debug_stream << results << '\n';
-    // align_pairwise(std::make_tuple(genome | view::slice(3, 28), seq), align_cfg::edit)
-    // auto it = index.begin();
-    // if (it.extend_right(seq))
-    // {
-    //     debug_stream << "Read ID: " << id << " Number of hits: " << it.count() << '\n';
-    //     for (auto const & pos : it.locate())
-    //     {
-    //         debug_stream << pos << ' ';
-    //     }
-    //     debug_stream << '\n';
-    // }
-    // For each read
-    sequence_file_in reads{"reads.fastq"};
-
-    for (auto & record : reads)
-    {
-        // search
-        // ...
-        // align
-        // ...
-    }
-
-    // align
-    // ...
-*/
 }
