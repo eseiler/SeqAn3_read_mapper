@@ -2,6 +2,7 @@
 #include <seqan3/alignment/pairwise/align_pairwise.hpp>
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
+#include <seqan3/io/alignment_file/output.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
 #include <seqan3/range/view/to_char.hpp>
 #include <seqan3/range/view/persist.hpp>
@@ -71,14 +72,8 @@ int main(int argc, char const ** argv)
     // We can access the sequence of our reference by requesting the sequence (get<field::SEQ>) of the first entry
     // in the reference file (*ref.begin())
     std::vector<dna5> genome = get<field::SEQ>(*reference_file.begin());
+    std::string genome_id = get<field::ID>(*reference_file.begin());
 
-    // if constexpr(debug)
-    // {
-    //     std::cout << genome.size() << '\n';
-    //     auto g = genome | view::take(50);
-    //     debug_stream << g;
-    //     debug_stream << '\n';
-    // }
     std::cout << "Indexing reference sequence.\n";
     // Index reference genome
     fm_index<std::vector<dna5>> index{genome};
@@ -91,6 +86,8 @@ int main(int argc, char const ** argv)
                                             search_cfg::deletion{max_error})
                                             | search_cfg::mode(search_cfg::all_best);
 
+    alignment_file_output sam_file{"/tmp/my.sam"};
+
     for (auto & [id, query] : query_file)
     {
         auto positions = search(index, query, search_cfg);
@@ -102,16 +99,28 @@ int main(int argc, char const ** argv)
             debug_stream << "position:\t" << position << '\n';
             debug_stream << "database:\t" << database_view << '\n';
 
+            alignment_file_output sam_file{"/tmp/my.sam"};
+            std::string genome_id = "test1";
+            std::vector<dna5> database_view{"ACGTACGT"_dna5};
+            std::vector<dna5> query{"ACGTACAT"_dna5};
             auto align_sequences = std::make_pair(database_view, query);
             auto align_cfg = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>
                                              | align_cfg::output<align_result_key::trace>;
 
             for (auto && alignment : align_pairwise(align_sequences, align_cfg))
             {
-                auto && [gapped_database, gapped_query] = alignment.trace();
+                using aligned_sequence_type = std::pair<std::vector<gapped<dna5>>, std::vector<gapped<dna5>>>;
+                aligned_sequence_type aligned_sequence = alignment.trace();
                 debug_stream << "score:\t\t" << alignment.score() << '\n';
-                debug_stream << "gapped_database:" << gapped_database << '\n';
-                debug_stream << "gapped_query:\t" << gapped_query << '\n';
+                debug_stream << "gapped_database:" << std::get<0>(aligned_sequence) << '\n';
+                debug_stream << "gapped_query:\t"  << std::get<1>(aligned_sequence) << '\n';
+
+                using sam_types = type_list<std::vector<dna5>, std::string, aligned_sequence_type>;
+                using sam_type_ids = fields<field::SEQ, field::REF_ID, field::ALIGNMENT>;
+                using sam_record_type = record<sam_types, sam_type_ids>;
+
+                sam_record_type record{query, genome_id, aligned_sequence};
+                sam_file.push_back(record);
             }
         }
     }
