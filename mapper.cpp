@@ -105,21 +105,22 @@ int main(int argc, char const ** argv)
         for (size_t position : positions)
         {
             auto database_view = genome | ranges::view::slice(position, position + query.size() + max_error_no);
-            debug_stream << "position:\t\t" << position << '\n';
+            debug_stream << "position:\t" << position << '\n';
             debug_stream << "database:\t" << database_view << '\n';
 
             auto align_sequences = std::make_pair(database_view, query);
-            auto align_cfg = align_cfg::edit | align_cfg::output<align_result_key::trace>;
+            auto align_cfg = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>
+                                             | align_cfg::output<align_result_key::trace>;
 
             for (auto && alignment : align_pairwise(align_sequences, align_cfg))
             {
                 auto && [gapped_database, gapped_query] = alignment.trace();
                 // TODO: change this when https://github.com/seqan/seqan3/issues/458 is fixed
                 // debug_stream << "database:\t" << gapped_database << '\n';
-                debug_stream << "database:\t" << (gapped_database | view::to_char) << '\n';
-                debug_stream << "query:\t\t" << (gapped_query | view::to_char) << '\n';
+                debug_stream << "score:\t\t" << alignment.score() << '\n';
+                debug_stream << "gapped_database:" << (gapped_database | view::to_char) << '\n';
+                debug_stream << "gapped_query:\t" << (gapped_query | view::to_char) << '\n';
             }
         }
-        break;
     }
 }
