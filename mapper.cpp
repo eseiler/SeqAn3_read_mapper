@@ -100,9 +100,6 @@ int main(int argc, char const ** argv)
             debug_stream << "database:\t" << database_view << '\n';
 
             alignment_file_output sam_file{"/tmp/my.sam"};
-            std::string genome_id = "test1";
-            std::vector<dna5> database_view{"ACGTACGT"_dna5};
-            std::vector<dna5> query{"ACGTACAT"_dna5};
             auto align_sequences = std::make_pair(database_view, query);
             auto align_cfg = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>
                                              | align_cfg::output<align_result_key::trace>;
