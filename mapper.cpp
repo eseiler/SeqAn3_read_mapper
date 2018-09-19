@@ -18,13 +18,6 @@ int main(int argc, char const ** argv)
 {
     using namespace seqan3;
     using namespace seqan3::literal;
-<<<<<<< HEAD
-    using namespace seqan3::search_cfg;
-    using namespace seqan3::align_cfg;
-||||||| merged common ancestors
-    using namespace seqan3::search_cfg;
-=======
->>>>>>> alignment works
 
     // Initialise the argument parser. The program name will be mapper, and we pass the arguments.
     argument_parser parser("Mapper", argc, argv);
