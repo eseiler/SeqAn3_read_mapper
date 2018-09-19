@@ -1,3 +1,5 @@
+#include <seqan3/alignment/configuration/all.hpp>
+#include <seqan3/alignment/pairwise/align_pairwise.hpp>
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
@@ -16,8 +18,13 @@ int main(int argc, char const ** argv)
 {
     using namespace seqan3;
     using namespace seqan3::literal;
+<<<<<<< HEAD
     using namespace seqan3::search_cfg;
     using namespace seqan3::align_cfg;
+||||||| merged common ancestors
+    using namespace seqan3::search_cfg;
+=======
+>>>>>>> alignment works
 
     // Initialise the argument parser. The program name will be mapper, and we pass the arguments.
     argument_parser myparser("Mapper", argc, argv);
@@ -84,32 +91,35 @@ int main(int argc, char const ** argv)
 
     sequence_file_input queries{query, fields<field::ID, field::SEQ>{}};
 
-    detail::configuration cfg_search = max_error(total{max_error_no},
-                                                substitution{max_error_no},
-                                                insertion{max_error_no},
-                                                deletion{max_error_no})
-                                                | mode(all_best);
+    auto search_cfg = search_cfg::max_error(search_cfg::total{max_error_no},
+                                            search_cfg::substitution{max_error_no},
+                                            search_cfg::insertion{max_error_no},
+                                            search_cfg::deletion{max_error_no})
+                                            | search_cfg::mode(search_cfg::all_best);
 
-    auto cfg_align = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>() | align_cfg::output<align_result_key::trace>;
-
-    for (auto & [id, seq] : queries)
+    for (auto & [id, query] : queries)
     {
-        auto results = search(index, seq, cfg_search);
-        for (auto res : results)
+        auto positions = search(index, query, search_cfg);
+        debug_stream << "id:\t\t" << id << '\n';
+        debug_stream << "query:\t\t" << query << '\n';
+        for (size_t position : positions)
         {
-            dna5_vector seq1 = genome | ranges::view::slice(res, res + seq.size() + max_error_no);
-            debug_stream << seq1 << '\n';
-            debug_stream << seq << '\n';
-            for (auto && res2 : align_pairwise(std::tie(seq1, seq), cfg_align))
+            auto database_view = genome | ranges::view::slice(position, position + query.size() + max_error_no);
+            debug_stream << "position:\t\t" << position << '\n';
+            debug_stream << "database:\t" << database_view << '\n';
+
+            auto align_sequences = std::make_pair(database_view, query);
+            auto align_cfg = align_cfg::edit | align_cfg::output<align_result_key::trace>;
+
+            for (auto && alignment : align_pairwise(align_sequences, align_cfg))
             {
-                debug_stream << "Score: " << res2.score() << '\n';
-                auto && [gap_seq1, gap_seq2] = res2.trace();
-                std::vector<gapped<dna5>> g1 = gap_seq1;
-                debug_stream << g1 << '\n';
-                // debug_stream << gap_seq2 << '\n';
+                auto && [gapped_database, gapped_query] = alignment.trace();
+                // TODO: change this when https://github.com/seqan/seqan3/issues/458 is fixed
+                // debug_stream << "database:\t" << gapped_database << '\n';
+                debug_stream << "database:\t" << (gapped_database | view::to_char) << '\n';
+                debug_stream << "query:\t\t" << (gapped_query | view::to_char) << '\n';
             }
         }
-        if (results.size() != 0)
-            break;
+        break;
     }
 }
