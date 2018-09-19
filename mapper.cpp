@@ -88,6 +88,9 @@ int main(int argc, char const ** argv)
 
     alignment_file_output sam_file{"/tmp/my.sam"};
 
+    // add the genome information to the reference genome dictionary of the header
+    sam_file.header().ref_dict[genome_id] = {genome.size(), std::string{}};
+
     for (auto & [id, query] : query_file)
     {
         auto positions = search(index, query, search_cfg);
@@ -99,7 +102,6 @@ int main(int argc, char const ** argv)
             debug_stream << "position:\t" << position << '\n';
             debug_stream << "database:\t" << database_view << '\n';
 
-            alignment_file_output sam_file{"/tmp/my.sam"};
             auto align_sequences = std::make_pair(database_view, query);
             auto align_cfg = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>
                                              | align_cfg::output<align_result_key::trace>;
@@ -112,11 +114,11 @@ int main(int argc, char const ** argv)
                 debug_stream << "gapped_database:" << std::get<0>(aligned_sequence) << '\n';
                 debug_stream << "gapped_query:\t"  << std::get<1>(aligned_sequence) << '\n';
 
-                using sam_types = type_list<std::vector<dna5>, std::string, aligned_sequence_type>;
-                using sam_type_ids = fields<field::SEQ, field::REF_ID, field::ALIGNMENT>;
+                using sam_types = type_list<std::vector<dna5>, std::string, std::string, aligned_sequence_type>;
+                using sam_type_ids = fields<field::SEQ, field::ID, field::REF_ID, field::ALIGNMENT>;
                 using sam_record_type = record<sam_types, sam_type_ids>;
 
-                sam_record_type record{query, genome_id, aligned_sequence};
+                sam_record_type record{query, id, genome_id, aligned_sequence};
                 sam_file.push_back(record);
             }
         }
