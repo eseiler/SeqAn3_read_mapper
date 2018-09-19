@@ -27,32 +27,33 @@ int main(int argc, char const ** argv)
 >>>>>>> alignment works
 
     // Initialise the argument parser. The program name will be mapper, and we pass the arguments.
-    argument_parser myparser("Mapper", argc, argv);
+    argument_parser parser("Mapper", argc, argv);
+    parser.info.synopsis.push_back("mapper [-e] <reference file path> <queries file path>");
 
     // This will hold the path to the reference sequence
-    std::string reference;
+    std::string reference_file_path;
     // This will hold the path to the query sequence
-    std::string query;
+    std::string query_file_path;
     // This will hold the maximum allowed number of errors for which we want to map and set the default to 0
-    int max_error_no{0};
+    int max_error{0};
 
     // We add a positional option to pass the reference sequence to our program
     // Positional options are always required
     // We set "Path to reference" as a description of the option
-    myparser.add_positional_option(reference, "Path to reference");
+    parser.add_positional_option(reference_file_path, "Path to reference genome");
     // We add another option to pass the query sequence to our program
     // We set "Path to reference" as a description of the option
-    myparser.add_positional_option(query, "Path to query");
+    parser.add_positional_option(query_file_path, "Path to query");
     // We add another option to specify the maximum allowed errors
     // We will be able to use either -e <number> or --error <number>
     // We set "Maximum allowed errors" as a description of the option
     // This option is not required and the default value 0 will be used if the option is not provided
-    myparser.add_option(max_error_no, 'e', "error", "Maximum allowed errors");
+    parser.add_option(max_error, 'e', "error", "Maximum allowed errors");
 
     // We parse the arguments
     try
     {
-        myparser.parse();
+        parser.parse();
     }
     catch (seqan3::parser_invalid_argument const & ext) // the user did something wrong
     {
@@ -71,12 +72,12 @@ int main(int argc, char const ** argv)
     // The format of the input file will be automatically determined
     // Since we have a FASTA file, we will be able to access the ID of sequences (lines that start with '>')
     // and the actual sequence (SEQ)
-    sequence_file_input ref{reference};
+    sequence_file_input reference_file{reference_file_path};
     // We store our reference sequence in `genome`
     // Our genome will be a vector (sequence) over the dna5 (A,C,G,T,N) alphabet
     // We can access the sequence of our reference by requesting the sequence (get<field::SEQ>) of the first entry
     // in the reference file (*ref.begin())
-    std::vector<dna5> genome = get<field::SEQ>(*ref.begin());
+    std::vector<dna5> genome = get<field::SEQ>(*reference_file.begin());
 
     // if constexpr(debug)
     // {
@@ -89,22 +90,22 @@ int main(int argc, char const ** argv)
     // Index reference genome
     fm_index<std::vector<dna5>> index{genome};
 
-    sequence_file_input queries{query, fields<field::ID, field::SEQ>{}};
+    sequence_file_input query_file{query_file_path, fields<field::ID, field::SEQ>{}};
 
-    auto search_cfg = search_cfg::max_error(search_cfg::total{max_error_no},
-                                            search_cfg::substitution{max_error_no},
-                                            search_cfg::insertion{max_error_no},
-                                            search_cfg::deletion{max_error_no})
+    auto search_cfg = search_cfg::max_error(search_cfg::total{max_error},
+                                            search_cfg::substitution{max_error},
+                                            search_cfg::insertion{max_error},
+                                            search_cfg::deletion{max_error})
                                             | search_cfg::mode(search_cfg::all_best);
 
-    for (auto & [id, query] : queries)
+    for (auto & [id, query] : query_file)
     {
         auto positions = search(index, query, search_cfg);
         debug_stream << "id:\t\t" << id << '\n';
         debug_stream << "query:\t\t" << query << '\n';
         for (size_t position : positions)
         {
-            auto database_view = genome | ranges::view::slice(position, position + query.size() + max_error_no);
+            auto database_view = genome | ranges::view::slice(position, position + query.size() + max_error);
             debug_stream << "position:\t" << position << '\n';
             debug_stream << "database:\t" << database_view << '\n';
 
@@ -115,11 +116,9 @@ int main(int argc, char const ** argv)
             for (auto && alignment : align_pairwise(align_sequences, align_cfg))
             {
                 auto && [gapped_database, gapped_query] = alignment.trace();
-                // TODO: change this when https://github.com/seqan/seqan3/issues/458 is fixed
-                // debug_stream << "database:\t" << gapped_database << '\n';
                 debug_stream << "score:\t\t" << alignment.score() << '\n';
-                debug_stream << "gapped_database:" << (gapped_database | view::to_char) << '\n';
-                debug_stream << "gapped_query:\t" << (gapped_query | view::to_char) << '\n';
+                debug_stream << "gapped_database:" << gapped_database << '\n';
+                debug_stream << "gapped_query:\t" << gapped_query << '\n';
             }
         }
     }
