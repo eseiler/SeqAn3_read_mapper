@@ -28,6 +28,8 @@ int main(int argc, char const ** argv)
     std::string reference_file_path;
     // This will hold the path to the query sequence
     std::string query_file_path;
+    // This will hold the path to the sam sequence
+    std::string sam_file_path;
     // This will hold the maximum allowed number of errors for which we want to map and set the default to 0
     int max_error{0};
 
@@ -43,6 +45,8 @@ int main(int argc, char const ** argv)
     // We set "Maximum allowed errors" as a description of the option
     // This option is not required and the default value 0 will be used if the option is not provided
     parser.add_option(max_error, 'e', "error", "Maximum allowed errors");
+    // Path to output sam file
+    parser.add_option(sam_file_path, 'o', "output", "Path to output sam file");
 
     // We parse the arguments
     try
@@ -86,7 +90,7 @@ int main(int argc, char const ** argv)
                                             search_cfg::deletion{max_error})
                                             | search_cfg::mode(search_cfg::all_best);
 
-    alignment_file_output sam_file{"/tmp/my.sam"};
+    alignment_file_output sam_file{sam_file_path};
 
     // add the genome information to the reference genome dictionary of the header
     sam_file.header().ref_dict[genome_id] = {genome.size(), std::string{}};
