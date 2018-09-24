@@ -2,6 +2,7 @@
 #include <seqan3/alignment/pairwise/align_pairwise.hpp>
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
+#include <seqan3/io/alignment_file/output.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
 #include <seqan3/search/fm_index/fm_index.hpp>
 #include <seqan3/search/algorithm/all.hpp>
@@ -87,6 +88,11 @@ int main(int argc, char const ** argv)
                                             search_cfg::deletion{max_error})
                                             | search_cfg::mode(search_cfg::all_best);
 
+    alignment_file_output sam_file{sam_file_path};
+
+    // add the genome information to the reference genome dictionary of the header
+    sam_file.header().ref_dict[genome_id] = {genome.size(), std::string{}};
+
     unsigned i = 0;
     for (auto & [id, query] : query_file)
     {
@@ -110,6 +116,13 @@ int main(int argc, char const ** argv)
                 debug_stream << "score:\t\t" << alignment.score() << '\n';
                 debug_stream << "gapped_database:" << std::get<0>(aligned_sequence) << '\n';
                 debug_stream << "gapped_query:\t"  << std::get<1>(aligned_sequence) << '\n';
+
+                using sam_types = type_list<std::vector<dna5>, std::string, std::string, aligned_sequence_type>;
+                using sam_type_ids = fields<field::SEQ, field::ID, field::REF_ID, field::ALIGNMENT>;
+                using sam_record_type = record<sam_types, sam_type_ids>;
+
+                sam_record_type record{query, id, genome_id, aligned_sequence};
+                sam_file.push_back(record);
             }
         }
 
