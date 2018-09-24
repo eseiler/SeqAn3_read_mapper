@@ -1,4 +1,5 @@
 #include <seqan3/argument_parser/all.hpp>
+#include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
 
 int main(int argc, char const ** argv)
@@ -52,6 +53,33 @@ int main(int argc, char const ** argv)
     debug_stream << "query_file_path:\t"     << query_file_path << '\n';
     debug_stream << "max_error:\t\t"         << max_error << '\n';
     debug_stream << "sam_file_path:\t\t"     << sam_file_path << '\n';
+
+    std::cout << "Loading reference file.\n";
+
+    // Read reference sequence
+    // The format of the input file will be automatically determined
+    // Since we have a FASTA file, we will be able to access the ID of sequences (lines that start with '>')
+    // and the actual sequence (SEQ)
+    sequence_file_input reference_file{reference_file_path};
+    // We store our reference sequence in `genome`
+    // Our genome will be a vector (sequence) over the dna5 (A,C,G,T,N) alphabet
+    // We can access the sequence of our reference by requesting the sequence (get<field::SEQ>) of the first entry
+    // in the reference file (*ref.begin())
+    std::vector<dna5> genome = get<field::SEQ>(*reference_file.begin());
+    std::string genome_id = get<field::ID>(*reference_file.begin());
+    debug_stream << "genome: " << genome_id << " -> " << (genome | view::take(100)) << '\n';
+
+    sequence_file_input query_file{query_file_path, fields<field::ID, field::SEQ>{}};
+
+    unsigned i = 0;
+    for (auto & [id, query] : query_file)
+    {
+        debug_stream << "id:\t\t" << id << '\n';
+        debug_stream << "query:\t\t" << query << '\n';
+
+        if (++i >= 20)
+            break;
+    }
 
     return 0;
 }
