@@ -1,6 +1,7 @@
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
+#include <seqan3/search/fm_index/fm_index.hpp>
 
 int main(int argc, char const ** argv)
 {
@@ -70,6 +71,10 @@ int main(int argc, char const ** argv)
     debug_stream << "genome: " << genome_id << " -> " << (genome | view::take(100)) << '\n';
 
     sequence_file_input query_file{query_file_path, fields<field::ID, field::SEQ>{}};
+
+    std::cout << "Indexing reference sequence.\n";
+    // Index reference genome
+    fm_index<std::vector<dna5>> index{genome};
 
     unsigned i = 0;
     for (auto & [id, query] : query_file)
