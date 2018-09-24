@@ -3,7 +3,6 @@
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/alignment_file/output.hpp>
-#include <seqan3/io/stream/debug_stream.hpp>
 #include <seqan3/search/fm_index/fm_index.hpp>
 #include <seqan3/search/algorithm/all.hpp>
 
@@ -56,10 +55,6 @@ int main(int argc, char const ** argv)
         return 0;
     }
 
-    debug_stream << "reference_file_path:\t" << reference_file_path << '\n';
-    debug_stream << "query_file_path:\t"     << query_file_path << '\n';
-    debug_stream << "max_error:\t\t"         << max_error << '\n';
-    debug_stream << "sam_file_path:\t\t"     << sam_file_path << '\n';
 
     std::cout << "Loading reference file.\n";
 
@@ -74,7 +69,6 @@ int main(int argc, char const ** argv)
     // in the reference file (*ref.begin())
     std::vector<dna5> genome = get<field::SEQ>(*reference_file.begin());
     std::string genome_id = get<field::ID>(*reference_file.begin());
-    debug_stream << "genome: " << genome_id << " -> " << (genome | view::take(100)) << '\n';
 
     sequence_file_input query_file{query_file_path, fields<field::ID, field::SEQ>{}};
 
@@ -93,17 +87,12 @@ int main(int argc, char const ** argv)
     // add the genome information to the reference genome dictionary of the header
     sam_file.header().ref_dict[genome_id] = {genome.size(), std::string{}};
 
-    unsigned i = 0;
     for (auto & [id, query] : query_file)
     {
         auto positions = search(index, query, search_cfg);
-        debug_stream << "id:\t\t" << id << '\n';
-        debug_stream << "query:\t\t" << query << '\n';
         for (size_t position : positions)
         {
             auto database_view = genome | ranges::view::slice(position, position + query.size() + max_error);
-            debug_stream << "position:\t" << position << '\n';
-            debug_stream << "database:\t" << database_view << '\n';
 
             auto align_sequences = std::make_pair(database_view, query);
             auto align_cfg = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>
@@ -113,9 +102,6 @@ int main(int argc, char const ** argv)
             {
                 using aligned_sequence_type = std::pair<std::vector<gapped<dna5>>, std::vector<gapped<dna5>>>;
                 aligned_sequence_type aligned_sequence = alignment.trace();
-                debug_stream << "score:\t\t" << alignment.score() << '\n';
-                debug_stream << "gapped_database:" << std::get<0>(aligned_sequence) << '\n';
-                debug_stream << "gapped_query:\t"  << std::get<1>(aligned_sequence) << '\n';
 
                 using sam_types = type_list<std::vector<dna5>, std::string, std::string, aligned_sequence_type>;
                 using sam_type_ids = fields<field::SEQ, field::ID, field::REF_ID, field::ALIGNMENT>;
@@ -125,10 +111,6 @@ int main(int argc, char const ** argv)
                 sam_file.push_back(record);
             }
         }
-
-        debug_stream << "======================" << '\n';
-        if (++i >= 20)
-            break;
     }
 
     return 0;
