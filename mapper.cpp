@@ -22,13 +22,13 @@ int main(int argc, char const ** argv)
 
     // Initialise the argument parser. The program name will be mapper, and we pass the arguments.
     argument_parser parser("Mapper", argc, argv);
-    parser.info.synopsis.push_back("mapper [-e] <reference file path> <queries file path>");
+    parser.info.synopsis.push_back("mapper [-e max_error] [-o sam_output_file] <reference file path> <query file path>");
 
     // This will hold the path to the reference sequence
     std::string reference_file_path;
     // This will hold the path to the query sequence
     std::string query_file_path;
-    // This will hold the path to the sam sequence
+    // This will hold the path to the sam output file
     std::string sam_file_path;
     // This will hold the maximum allowed number of errors for which we want to map and set the default to 0
     int max_error{0};
@@ -63,7 +63,6 @@ int main(int argc, char const ** argv)
         return 0;
     }
 
-    // constexpr bool debug{true};
     std::cout << "Loading reference file.\n";
 
     // Read reference sequence
