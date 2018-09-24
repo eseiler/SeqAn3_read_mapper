@@ -2,6 +2,9 @@
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
 #include <seqan3/search/fm_index/fm_index.hpp>
+#include <seqan3/search/algorithm/all.hpp>
+
+#include <range/v3/action/slice.hpp>
 
 int main(int argc, char const ** argv)
 {
@@ -76,12 +79,26 @@ int main(int argc, char const ** argv)
     // Index reference genome
     fm_index<std::vector<dna5>> index{genome};
 
+    auto search_cfg = search_cfg::max_error(search_cfg::total{max_error},
+                                            search_cfg::substitution{max_error},
+                                            search_cfg::insertion{max_error},
+                                            search_cfg::deletion{max_error})
+                                            | search_cfg::mode(search_cfg::all_best);
+
     unsigned i = 0;
     for (auto & [id, query] : query_file)
     {
+        auto positions = search(index, query, search_cfg);
         debug_stream << "id:\t\t" << id << '\n';
         debug_stream << "query:\t\t" << query << '\n';
+        for (size_t position : positions)
+        {
+            auto database_view = genome | ranges::view::slice(position, position + query.size() + max_error);
+            debug_stream << "position:\t" << position << '\n';
+            debug_stream << "database:\t" << database_view << '\n';
+        }
 
+        debug_stream << "======================" << '\n';
         if (++i >= 20)
             break;
     }
