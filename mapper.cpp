@@ -1,3 +1,5 @@
+#include <seqan3/alignment/configuration/all.hpp>
+#include <seqan3/alignment/pairwise/align_pairwise.hpp>
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/stream/debug_stream.hpp>
@@ -96,6 +98,19 @@ int main(int argc, char const ** argv)
             auto database_view = genome | ranges::view::slice(position, position + query.size() + max_error);
             debug_stream << "position:\t" << position << '\n';
             debug_stream << "database:\t" << database_view << '\n';
+
+            auto align_sequences = std::make_pair(database_view, query);
+            auto align_cfg = align_cfg::edit | align_cfg::sequence_ends<free_ends_at::seq1>
+                                             | align_cfg::output<align_result_key::trace>;
+
+            for (auto && alignment : align_pairwise(align_sequences, align_cfg))
+            {
+                using aligned_sequence_type = std::pair<std::vector<gapped<dna5>>, std::vector<gapped<dna5>>>;
+                aligned_sequence_type aligned_sequence = alignment.trace();
+                debug_stream << "score:\t\t" << alignment.score() << '\n';
+                debug_stream << "gapped_database:" << std::get<0>(aligned_sequence) << '\n';
+                debug_stream << "gapped_query:\t"  << std::get<1>(aligned_sequence) << '\n';
+            }
         }
 
         debug_stream << "======================" << '\n';
