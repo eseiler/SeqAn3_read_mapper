@@ -45,6 +45,14 @@ sudo apt-get install gcc-7
 ```
 brew install gcc@7
 ```
+In some situations it can happen that the correct assembler is not found. 
+You will see an error during the cmake configuration that says something like: `... could not understand flag m ...`.
+In this case you can try to export the Path:
+```
+export PATH=/util/bin:$PATH
+```
+and try running cmake again.
+
 **MacOS** using [MacPorts](https://www.macports.org/)
 ```
 sudo port install gcc-7
