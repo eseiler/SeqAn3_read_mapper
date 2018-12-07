@@ -18,7 +18,7 @@ int main(int argc, char const ** argv)
     // This will hold the path to the sam output file
     std::string sam_file_path;
     // This will hold the maximum allowed number of errors for which we want to map and set the default to 0
-    int max_error{0};
+    uint8_t max_error{0};
 
     // We add a positional option to pass the reference sequence to our program
     // Positional options are always required
