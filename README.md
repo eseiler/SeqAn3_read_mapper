@@ -1,3 +1,8 @@
+# This tutorial is now part of the [Documentation](http://docs.seqan.de/seqan/3.0.0-master-user/tutorial_read_mapper.html)
+
+---
+---
+
 # SeqAn3 Read Mapper Tutorial
 
 ## Overview
